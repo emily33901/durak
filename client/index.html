@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Durak</title>
+
+    <script>
+        var socket = new WebSocket("ws://localhost:61016/ws")
+        socket.onopen = (ev) => {
+            console.log('Connected')
+        }
+        socket.onclose = (ev) => {
+        }
+        socket.onerror = (ev) => {
+        }
+        socket.onmessage = (ev) => {
+        }
+
+        nameChanged = () => {
+            var newName = document.getElementById("name").value
+            socket.send(JSON.stringify({
+                Type: 'client/changeName',
+                Name: newName,
+            }))
+        }
+    </script>
+
+</head>
+
+<body>
+    <input type="text" id="name">
+    <button onclick="nameChanged()">Change name</button>
+</body>
+
+</html>
