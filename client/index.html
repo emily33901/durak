@@ -6,32 +6,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Durak</title>
 
-    <script>
-        var socket = new WebSocket("ws://localhost:61016/ws")
-        socket.onopen = (ev) => {
-            console.log('Connected')
+    <style>
+        #canvas {
+            color: grey;
+            border: 2px solid;
+            width: 1200px;
+            height: 800px;
         }
-        socket.onclose = (ev) => {
-        }
-        socket.onerror = (ev) => {
-        }
-        socket.onmessage = (ev) => {
-        }
+    </style>
 
-        nameChanged = () => {
-            var newName = document.getElementById("name").value
-            socket.send(JSON.stringify({
-                Type: 'client/changeName',
-                Name: newName,
-            }))
-        }
-    </script>
-
+    <script src="conn.js" type="module"></script>
+    <script src="game.js" type="module"></script>
 </head>
 
-<body>
-    <input type="text" id="name">
-    <button onclick="nameChanged()">Change name</button>
+<body onload="window.s.gameInit()">
+    <input type="text" id="nameChange">
+    <button onclick="window.s.nameChanged()">Change name</button>
+    <br>
+    <button id="createLobby" onclick="window.s.createLobby()">Create lobby</button>
+    <button id="leaveLobby" onclick="window.s.leaveLobby()">Leave lobby</button>
+    <input type="text" id="lobbyCode">
+    <button id="joinLobby" onclick="window.s.joinLobby()">Join lobby</button>
+
+    <h2 id="name"></h2>
+
+    <h3 id="lobbyText"></h3>
+    <p id="lobbyPeople"></p>
+
+    <canvas id="canvas" width="1200" height="800">
+    </canvas>
 </body>
 
 </html>
