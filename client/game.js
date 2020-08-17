@@ -20,13 +20,12 @@ let drawCard = (card) => {
     }
 
     let [x, y] = where
-    if (selected) {
-        ctx.filter = "hue-rotate(50)"
-    }
 
     ctx.drawImage(img, x, y, size * Card.aspect, size)
 
     if (selected) {
+        ctx.filter = "brightness(10%) sepia(70%) saturate(10)  hue-rotate(80deg) opacity(30%)"
+        ctx.drawImage(img, x, y, size * Card.aspect, size)
         ctx.filter = "none"
     }
 }
@@ -137,11 +136,10 @@ let userInteraction = (hand) => {
                 }
             }
         }
-
     }
 
     if (mouseDown == true && !dragging) {
-        if (!draggedCards.includes(hoveredCard) && hoveredCard != -1)
+        if (draggedCards.length == 0 && hoveredCard != -1)
             draggedCards.push(hoveredCard)
         dragging = true
         dragStart = mousePos
