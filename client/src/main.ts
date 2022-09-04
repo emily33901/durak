@@ -1,26 +1,27 @@
 import { Card, randomHand, completeDeck, getCard } from './card.js'
 import { State } from './state.js'
-import { interaction } from './interaction.js'
+import { DragDest, interaction } from './interaction.js'
 import * as util from './util.js'
+import { Vector } from './util.js'
 
-let ctx = null
-let canvas = null
+let ctx: CanvasRenderingContext2D
+let canvas: HTMLCanvasElement
 
-let cardCache = {}
-const getCardImg = (name) => {
-    let img = cardCache[name]
+const cardCache: Map<string, HTMLImageElement> = new Map()
+const getCardImg = (name: string) => {
+    let img = cardCache.get(name)
 
-    if (typeof img == "undefined") {
+    if (typeof img == 'undefined') {
         img = new Image()
         img.src = `img/card/${name}.png`
-        cardCache[name] = img
+        cardCache.set(name, img)
     }
 
     return img
 }
 
-const drawCard = (card) => {
-    const name = card.toString()
+const drawCard = (card: Card) => {
+    let name = card.id()
     const where = card.pos
     const size = card.size
     const selected = card.selected
@@ -30,51 +31,50 @@ const drawCard = (card) => {
 
     const img = getCardImg(name)
 
-    const [x, y] = where
+    const { x, y } = where
 
     ctx.drawImage(img, x, y, size * Card.aspect, size)
 
     if (selected) {
-        ctx.filter = "brightness(100%) sepia(100%) saturate(1000) hue-rotate(-60deg) opacity(70%)"
+        ctx.filter = 'brightness(100%) sepia(100%) saturate(1000) hue-rotate(-60deg) opacity(70%)'
         ctx.drawImage(img, x, y, size * Card.aspect, size)
-        ctx.filter = "none"
+        ctx.filter = 'none'
     } else if (!interactable) {
-        ctx.filter = "brightness(0%) opacity(40%)"
+        ctx.filter = 'brightness(0%) opacity(40%)'
         ctx.drawImage(img, x, y, size * Card.aspect, size)
-        ctx.filter = "none"
+        ctx.filter = 'none'
     }
 }
 
-const drawDestRegion = (dragdest) => {
+const drawDestRegion = (dragdest: DragDest) => {
     // use a card as the baseline for the outline
-    const img = cardCache[Object.keys(cardCache)[0]]
+    const img = getCardImg(cardCache.entries().next().value[0])
 
-    const [x, y] = dragdest.where
+    const { x, y } = dragdest.where
 
-    ctx.filter = "brightness(0%) invert() sepia(100%) saturate(1000) hue-rotate(60deg) opacity(30%)"
+    ctx.filter = 'brightness(0%) invert() sepia(100%) saturate(1000) hue-rotate(60deg) opacity(30%)'
     ctx.drawImage(img, x, y, dragdest.size * Card.aspect, dragdest.size)
-    ctx.filter = "none"
+    ctx.filter = 'none'
 }
 
-const arrangeHand = (hand, where, angle) => {
-    const [startX, startY] = where
+const arrangeHand = (hand: Card[], where: Vector, angle: number) => {
+    const { x: startX, y: startY } = where
 
     const overlap = 60 * Card.aspect
     const len = hand.length
 
-    for (const i = 0; i < len; i++) {
-        const card = getCard(hand[i])
-        const pos = [startX + (i * overlap), startY]
+    for (const [i, card] of hand.entries()) {
+        const pos = new Vector(startX + (i * overlap), startY)
         card.pos = pos
         card.size = 200
         card.revealed = true
         if (card.hovered) {
-            card.pos[1] -= 30
+            card.pos.y -= 30
         }
     }
 }
 
-let drawCards = () => {
+const drawCards = () => {
     for (const c of completeDeck) {
         if (c.revealed && hand.indexOf(c) == -1) {
             drawCard(c)
@@ -82,7 +82,7 @@ let drawCards = () => {
     }
 
     for (const c of hand) {
-        drawCard(getCard(c))
+        drawCard(c)
     }
 
     for (const r of interaction.destRegions) {
@@ -99,21 +99,24 @@ const frame = () => {
     interaction.onframe(hand)
     drawCards()
 
-    arrangeHand(hand, [10, 300], 0)
+    arrangeHand(hand, new Vector(10, 300), 0)
 
     requestAnimationFrame(frame)
 }
 
 const sortHand = () => {
-    hand = hand.sort((a, b) => getCard(a).compare(getCard(b)))
+    hand = hand.sort((a, b) => a.compare(b))
 }
 
-window.s.gameInit = () => {
+export function gameInit() {
     sortHand()
 
     // draw the hand in the correct order
-    canvas = document.getElementById("canvas")
-    ctx = canvas.getContext("2d")
+    canvas = document.getElementById('canvas') as HTMLCanvasElement
+    ctx = canvas.getContext('2d') as CanvasRenderingContext2D
+
+    interaction.init()
+
     requestAnimationFrame(frame)
 }
 

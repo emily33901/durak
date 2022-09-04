@@ -9,44 +9,52 @@ const buttonMap = {
     mouse3: 4,
 }
 
+type DragDestAction = (cards: Card[]) => void;
+
 class DragDest {
-    constructor(where, size, angle) {
+    where: Vector
+    size: number
+    angle: number
+    action: DragDestAction
+
+    constructor(where: Vector, size: number, angle: number, action?: DragDestAction) {
         this.where = where
         this.size = size
         this.angle = angle
+        this.action = action ?? (() => undefined)
     }
 
     bb() {
-        return [...this.where, this.size, this.size * Card.aspect]
+        return [this.where.x, this.where.y, this.size, this.size * Card.aspect]
     }
 }
 
 class Interaction {
-    mousePos: Vector;
-    mouseButtons: boolean[];
-    didSelect: boolean;
-    draggedCards: Card[];
-    dragging: boolean;
-    dragStart: Vector;
-    destRegions: Box[]
+    mousePos: Vector
+    mouseButtons: boolean[]
+    didSelect: boolean
+    draggedCards: Card[]
+    dragging: boolean
+    dragStart: Vector
+    destRegions: DragDest[]
 
     constructor() {
-        this.mousePos = [0, 0]
+        this.mousePos = new Vector(0, 0)
         this.mouseButtons = [false, false, false]
         this.didSelect = false
 
         this.draggedCards = []
         this.dragging = false
-        this.dragStart = [0, 0]
+        this.dragStart = new Vector(0, 0)
 
         this.destRegions = []
     }
 
-    onmousemove(ev) {
-        this.mousePos = [ev.pageX - canvas.offsetLeft, ev.pageY - canvas.offsetTop]
+    onmousemove(ev: MouseEvent) {
+        this.mousePos = new Vector(ev.pageX - canvas.offsetLeft, ev.pageY - canvas.offsetTop)
     }
 
-    onmousedown(ev) {
+    onmousedown(ev: MouseEvent) {
         if (ev.button == buttonMap.mouse1) {
             this.mouseButtons[0] = true
         }
@@ -56,7 +64,7 @@ class Interaction {
         }
     }
 
-    onmouseup(ev) {
+    onmouseup(ev: MouseEvent) {
         if (ev.button == buttonMap.mouse1) {
             this.mouseButtons[0] = false
         }
@@ -69,41 +77,40 @@ class Interaction {
     mouse1Down() { return this.mouseButtons[0] }
     mouse2Down() { return this.mouseButtons[1] }
 
-    onframe(hand) {
+    onframe(hand: Card[]) {
         let didHover = false
-        let hoveredCard = -1
+        let hoveredCard = null
 
         // Reverse here becuase the hand is drawn backwards
         // (i.e. the furthest backest card is drawn first so that
         // the others are on top of it.) and we want user interaction
         // to be the other way around
-        for (let cid of [...hand].reverse()) {
-            let c = getCard(cid)
-            if (this.draggedCards.includes(cid)) {
+        for (const c of [...hand].reverse()) {
+            if (this.draggedCards.includes(c)) {
                 if (this.dragging) {
-                    let oldPos = c.pos
+                    const oldPos = c.pos
                     // move the cards with the cursor
-                    let delta = util.addVector(this.mousePos, [-this.dragStart[0], -this.dragStart[1]])
-                    c.pos = util.addVector(c.pos, delta)
+                    const delta = this.mousePos.add(this.dragStart.inv())
+                    c.pos = c.pos.add(delta)
 
-                    for (let r of this.destRegions) {
-                        if (!util.bbIntersect(this.mousePos, r.bb())) continue;
+                    for (const r of this.destRegions) {
+                        if (!this.mousePos.intersects(r.bb())) continue
                         // If we are within the bounding box of a destination, then
                         // snap to that destination
-                        let delta = util.addVector(r.where, [-this.dragStart[0], -this.dragStart[1]])
-                        let delta2 = util.addVector(this.dragStart, [-oldPos[0], -oldPos[1]])
-                        let fdelta = util.addVector(delta, delta2)
-                        c.pos = util.addVector(oldPos, fdelta)
+                        const delta = r.where.add(this.dragStart.inv())
+                        const delta2 = this.dragStart.add(oldPos.inv())
+                        const fdelta = delta.add(delta2)
+                        c.pos = oldPos.add(fdelta)
                     }
                 }
             } else {
                 c.selected = false
                 c.hovered = false
                 if (!didHover && c.interactable) {
-                    if (util.bbIntersect(this.mousePos, c.boundingBox())) {
+                    if (this.mousePos.intersects(c.boundingBox())) {
                         didHover = true
                         c.hovered = true
-                        hoveredCard = cid
+                        hoveredCard = c
                     }
                 }
             }
@@ -112,12 +119,19 @@ class Interaction {
         // If we click on a card and we are not already dragging,
         // then start dragging
         if (this.mouse1Down() && !this.dragging) {
-            if (this.draggedCards.length == 0 && hoveredCard != -1)
+            if (this.draggedCards.length == 0 && hoveredCard)
                 this.draggedCards.push(hoveredCard)
             this.dragging = true
             this.dragStart = this.mousePos
         } else if (!this.mouse1Down() && this.dragging) {
             // if we are in a drag and we release mouse1 then stop
+
+            // If we are intersecting a drag dest, then invoke its actions
+            for (const r of this.destRegions) {
+                if (!this.mousePos.intersects(r.bb())) continue
+                r.action(this.draggedCards)
+            }
+
             this.dragging = false
             this.draggedCards = []
         }
@@ -125,26 +139,28 @@ class Interaction {
         // If we press mouse2 on a card that we are not already selecting
         // then select it and add it to our dragged cards
         if (this.mouse2Down() &&
+            hoveredCard &&
             !this.draggedCards.includes(hoveredCard) &&
-            hoveredCard != -1 &&
             !this.didSelect) {
             this.draggedCards.push(hoveredCard)
             this.didSelect = true
         }
     }
 
-    setDestinationRegions(newRegions) {
+    setDestinationRegions(newRegions: DragDest[]) {
         this.destRegions = newRegions
+    }
+
+    init() {
+        // set document events
+        document.onmousemove = (ev) => interaction.onmousemove(ev)
+        document.onmousedown = (ev) => interaction.onmousedown(ev)
+        document.onmouseup = (ev) => interaction.onmouseup(ev)
+
+        document.oncontextmenu = (ev) => { ev.preventDefault() }
     }
 }
 
 const interaction = new Interaction()
-
-// set document events
-document.onmousemove = (ev) => interaction.onmousemove(ev)
-document.onmousedown = (ev) => interaction.onmousedown(ev)
-document.onmouseup = (ev) => interaction.onmouseup(ev)
-
-document.oncontextmenu = (ev) => { ev.preventDefault() }
 
 export { interaction, DragDest }
