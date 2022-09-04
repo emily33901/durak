@@ -1,3 +1,5 @@
+/*
+
 var socket = new WebSocket("ws://localhost:61016/ws")
 
 let socketSend = (o) => {
@@ -25,8 +27,8 @@ socket.onmessage = (ev) => {
     switch (msg.Type) {
         case "lobby/joined": {
             console.log("Joined lobby", msg.ID)
-            document.getElementById('createLobby').disabled = true
-            document.getElementById('lobbyText').innerText = "In lobby " + msg.ID
+            document.getElementById('createLobby')!.disabled = true
+            document.getElementById('lobbyText')!.innerText = "In lobby " + msg.ID
             inLobby = true
             setTimeout(lobbyRefresh, 1000)
             break
@@ -34,12 +36,12 @@ socket.onmessage = (ev) => {
         case "lobby/left": {
             inLobby = false
             console.log("Left lobby")
-            document.getElementById('createLobby').disabled = false
-            document.getElementById('lobbyText').innerText = ""
+            document.getElementById('createLobby')!.disabled = false
+            document.getElementById('lobbyText')!.innerText = ""
             break
         }
         case "lobby/query/response": {
-            document.getElementById('lobbyPeople').innerHTML = JSON.stringify(msg)
+            document.getElementById('lobbyPeople')!.innerHTML = JSON.stringify(msg)
             break
         }
     }
@@ -80,3 +82,4 @@ window.s = {
     createLobby: createLobby,
     nameChanged: nameChanged,
 }
+*/

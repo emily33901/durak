@@ -1,3 +1,7 @@
 *.exe
 secrets.json
 .lite*
+.DS_Store
+node_modules
+package-lock.json
+client/public/bundle*
