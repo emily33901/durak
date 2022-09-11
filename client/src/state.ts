@@ -1,8 +1,10 @@
-import { Card, getCard } from './card.js'
-import { interaction, DragDest } from './interaction.js'
+/* eslint-disable indent */
+import { Card, getCard, randomHand } from './card.js'
+import { Draw } from './draw.js'
+import { DragDest, Interaction } from './interaction.js'
 import { Vector } from './util.js'
 
-enum GameState {
+export enum GameState {
     // if you are being attacked then you can pass on
     // pick up or defend
     'attacked',
@@ -16,38 +18,166 @@ enum GameState {
     'otherAttack',
 }
 
+export class State {
+    readonly State = GameState
 
-class State {
-    static readonly State = GameState
+    state = this.State.attacking
 
-    static state = State.State.attacking
+    cardsInPlay: Card[] = []
+    hands: Card[][] = []
+    activePlayer = 0
 
-    static calcInteractable(hand: Card[]) {
+    constructor() {
+        undefined
+    }
+
+    setupHands(playerCount: number) {
+        this.hands = [...new Array(playerCount).keys()].map(_ => randomHand())
+    }
+
+    sortHands() {
+        for (const [i, hand] of this.hands.entries()) {
+            this.hands[i] = hand.sort((a, b) => a.compare(b))
+        }
+
+        this.cardsInPlay.sort((a, b) => a.compare(b))
+    }
+
+    arrangeHand(hand: Card[], where: Vector, angle: number, overlap?: number) {
+        overlap = overlap ?? 60 * Card.aspect
+        const len = hand.length
+
+        for (const [i, card] of hand.entries()) {
+            const pos = new Vector(where.x + (i * overlap), where.y)
+            card.pos = pos
+            card.size = 200
+            card.revealed = true
+            if (card.hovered) {
+                card.pos.y -= 30
+            }
+        }
+    }
+
+    arrangeHands() {
+        const step = (2 * Math.PI) / this.hands.length
+        for (const [i, hand] of this.hands.entries()) {
+            const pos = new Vector(200 + 100 * Math.sin(i * step), 400 + 100 * Math.cos(i * step))
+            this.arrangeHand(hand, pos, 0)
+        }
+
+        // Arrange cards in play in the centre
+        const pos = new Vector(500, 500)
+        this.arrangeHand(this.cardsInPlay, pos, 0, 100)
+    }
+
+    // Hand of the current player
+    activeHand() {
+        return this.hands[this.activePlayer]
+    }
+
+    updateActiveHand(f: (h: Card[]) => Card[]) {
+        this.hands[this.activePlayer] = f(this.activeHand())
+    }
+
+    // Move cards from the active hand into play
+    moveToInPlay(f: (c: Card) => boolean) {
+        console.info(this.cardsInPlay, this.activeHand())
+        this.cardsInPlay.push(...this.activeHand().filter(f))
+        this.updateActiveHand(h => h.filter(c => !f(c)))
+        console.info(this.cardsInPlay, this.activeHand())
+    }
+
+    updateHand(player: number, newHand: Card[]) {
+        this.hands[player] = newHand
+    }
+
+    draw(interaction: Interaction) {
+        // Draw state
+        Draw.text(`${GameState[this.state]}`, new Vector(600, 40))
+
+        // Draw hands
+        for (const c of this.hands.flat()) {
+            Draw.card(c)
+        }
+
+        // Draw dest regions
+        for (const r of interaction.destRegions) {
+            Draw.destRegion(r)
+        }
+
+        // Draw other cards if they have been revealed
+        // for (const c of completeDeck) {
+        //     if (c.revealed) {
+        //         drawCard(c)
+        //     }
+        // }
+    }
+
+    changeState(interaction: Interaction, newState: GameState) {
+        // Reset all cards and all state to not interactable
+        // remove all drag dests
+
+
+
+        interaction.setDestinationRegions([])
+        for (const c of this.hands.flat()) {
+            c.interactable = false
+        }
+
+        for (const c of this.cardsInPlay) {
+            c.interactable = false
+        }
+    }
+
+    onframe(interaction: Interaction) {
         const selectedCards = interaction.draggedCards
+
+        this.sortHands()
+        this.arrangeHands()
+
+        interaction.onframe(this.activeHand())
 
         // TODO: calc for cards on table
 
-        switch (State.state) {
-            case State.State.attacking: {
+        switch (this.state) {
+            case this.State.attacking: {
+                interaction.setDestinationRegions(
+                    [
+                        new DragDest(
+                            new Vector(600, 300), 200, 0,
+                            (cards) => {
+                                // Dragged cards, move to attacked phase,
+                                this.changeState(interaction, this.State.attacked)
+
+                                console.log('cards is ', cards)
+
+                                // remove cards from hand that were dragged in
+                                // keep everything that isnt in cards
+                                this.moveToInPlay((c) => cards.indexOf(c) != -1)
+                            }
+                        )
+                    ]
+                )
+
                 if (selectedCards.length == 0) {
                     // any cards here are selectable
-                    hand.map(x => x.interactable = true)
+                    this.updateActiveHand(h => h.map(x => { x.interactable = true; return x }))
                     break
                 }
+
                 // look at the first card for what number they selected
                 // and calculate for the rest of the cards
                 const firstCard = selectedCards[0]
-                for (const c of hand) {
+                for (const c of this.activeHand()) {
                     if (c.number() != firstCard.number()) {
                         c.interactable = false
                     }
                 }
                 break
             }
+            case this.State.attacked: {
+                break
+            }
         }
-
-        interaction.setDestinationRegions([new DragDest(new Vector(600, 600), 200, 0, (cards) => { alert(cards) })])
     }
 }
-
-export { State }

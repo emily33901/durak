@@ -1,5 +1,4 @@
 import { Card, getCard } from './card.js'
-import { canvas } from './main.js'
 import * as util from './util.js'
 import { Box, Vector } from './util.js'
 
@@ -30,6 +29,7 @@ class DragDest {
 }
 
 class Interaction {
+    canvas: HTMLCanvasElement
     mousePos: Vector
     mouseButtons: boolean[]
     didSelect: boolean
@@ -38,7 +38,9 @@ class Interaction {
     dragStart: Vector
     destRegions: DragDest[]
 
-    constructor() {
+    constructor(canvas: HTMLCanvasElement) {
+        this.canvas = canvas
+
         this.mousePos = new Vector(0, 0)
         this.mouseButtons = [false, false, false]
         this.didSelect = false
@@ -51,7 +53,7 @@ class Interaction {
     }
 
     onmousemove(ev: MouseEvent) {
-        this.mousePos = new Vector(ev.pageX - canvas.offsetLeft, ev.pageY - canvas.offsetTop)
+        this.mousePos = new Vector(ev.pageX - this.canvas.offsetLeft, ev.pageY - this.canvas.offsetTop)
     }
 
     onmousedown(ev: MouseEvent) {
@@ -151,16 +153,15 @@ class Interaction {
         this.destRegions = newRegions
     }
 
-    init() {
+    init(canvas: HTMLCanvasElement) {
+        this.canvas = canvas
         // set document events
-        document.onmousemove = (ev) => interaction.onmousemove(ev)
-        document.onmousedown = (ev) => interaction.onmousedown(ev)
-        document.onmouseup = (ev) => interaction.onmouseup(ev)
+        document.onmousemove = (ev) => this.onmousemove(ev)
+        document.onmousedown = (ev) => this.onmousedown(ev)
+        document.onmouseup = (ev) => this.onmouseup(ev)
 
         document.oncontextmenu = (ev) => { ev.preventDefault() }
     }
 }
 
-const interaction = new Interaction()
-
-export { interaction, DragDest }
+export { Interaction, DragDest }
