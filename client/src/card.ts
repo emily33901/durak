@@ -12,6 +12,7 @@ export class Card {
 
     static validNumber = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
     static validLetter = ['C', 'D', 'H', 'S']
+    static defaultSize = 200
 
     static aspect = 0.6543560606060606
     constructor(cardNumber: string, cardLetter: string) {
@@ -21,7 +22,7 @@ export class Card {
         this.revealed = true
         this.hovered = false
         this.selected = false
-        this.interactable = true
+        this.interactable = false
     }
 
     number() {

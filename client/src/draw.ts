@@ -51,7 +51,9 @@ export class Draw {
 
         const { x, y } = dragdest.where
 
-        this.ctx.filter = 'brightness(0%) invert() sepia(100%) saturate(1000) hue-rotate(60deg) opacity(30%)'
+        const hue = dragdest.valid ? 'hue-rotate(60deg)' : 'hue-rotate(240deg)'
+
+        this.ctx.filter = `brightness(0%) invert() sepia(500%) saturate(1000) ${hue} opacity(30%)`
         this.ctx.drawImage(img, x, y, dragdest.size * Card.aspect, dragdest.size)
         this.ctx.filter = 'none'
     }

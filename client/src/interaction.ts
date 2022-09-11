@@ -9,18 +9,25 @@ const buttonMap = {
 }
 
 type DragDestAction = (cards: Card[]) => void;
+type DragDestValid = (c: Card[]) => boolean;
 
 class DragDest {
     where: Vector
     size: number
     angle: number
-    action: DragDestAction
+    valid: boolean
 
-    constructor(where: Vector, size: number, angle: number, action?: DragDestAction) {
+    action: DragDestAction
+    calcValid: DragDestValid
+
+    constructor(where: Vector, size: number, angle: number, action?: DragDestAction, valid?: DragDestValid) {
         this.where = where
         this.size = size
         this.angle = angle
+        this.valid = false
+
         this.action = action ?? (() => undefined)
+        this.calcValid = valid ?? (() => false)
     }
 
     bb() {
@@ -79,7 +86,7 @@ class Interaction {
     mouse1Down() { return this.mouseButtons[0] }
     mouse2Down() { return this.mouseButtons[1] }
 
-    onframe(hand: Card[]) {
+    onframe(deck: Card[]) {
         let didHover = false
         let hoveredCard = null
 
@@ -87,7 +94,7 @@ class Interaction {
         // (i.e. the furthest backest card is drawn first so that
         // the others are on top of it.) and we want user interaction
         // to be the other way around
-        for (const c of [...hand].reverse()) {
+        for (const c of [...deck].reverse()) {
             if (this.draggedCards.includes(c)) {
                 if (this.dragging) {
                     const oldPos = c.pos
@@ -96,7 +103,7 @@ class Interaction {
                     c.pos = c.pos.add(delta)
 
                     for (const r of this.destRegions) {
-                        if (!this.mousePos.intersects(r.bb())) continue
+                        if (!this.mousePos.intersects(r.bb()) || !r.valid) continue
                         // If we are within the bounding box of a destination, then
                         // snap to that destination
                         const delta = r.where.add(this.dragStart.inv())
@@ -130,7 +137,7 @@ class Interaction {
 
             // If we are intersecting a drag dest, then invoke its actions
             for (const r of this.destRegions) {
-                if (!this.mousePos.intersects(r.bb())) continue
+                if (!this.mousePos.intersects(r.bb()) || !r.valid) continue
                 r.action(this.draggedCards)
             }
 
@@ -146,6 +153,11 @@ class Interaction {
             !this.didSelect) {
             this.draggedCards.push(hoveredCard)
             this.didSelect = true
+        }
+
+        // re-calculate whether drag dests are valid
+        for (const r of this.destRegions) {
+            r.valid = r.calcValid(this.draggedCards)
         }
     }
 
