@@ -1,5 +1,5 @@
 /* eslint-disable indent */
-import { Card, getCard, randomHand } from './card.js'
+import { Card, deck } from './card.js'
 import { Draw } from './draw.js'
 import { DragDest, Interaction } from './interaction.js'
 import { Vector } from './util.js'
@@ -24,15 +24,21 @@ export class State {
     state = this.State.attacking
 
     cardsInPlay: Card[] = []
+    drawPile: Card[] = []
     hands: Card[][] = []
     activePlayer = 0
 
     constructor() {
-        undefined
+        this.drawPile = deck()
     }
 
     setupHands(playerCount: number) {
-        this.hands = [...new Array(playerCount).keys()].map(_ => randomHand())
+        // Give cards to each player from the draw pile
+        const maxCards = Math.min(Math.floor(this.drawPile.length / playerCount), 6)
+        console.log('max ', maxCards)
+        this.hands = [...new Array(playerCount).keys()].map(_ => [...new Array(maxCards)].map(_ => this.drawPile.pop() as Card))
+
+        this.disableCards()
     }
 
     sortHands() {
@@ -61,7 +67,7 @@ export class State {
     arrangeHands() {
         const step = (2 * Math.PI) / this.hands.length
         for (const [i, hand] of this.hands.entries()) {
-            const pos = new Vector(200 + 100 * Math.sin(i * step), 400 + 100 * Math.cos(i * step))
+            const pos = new Vector(400 + 400 * Math.cos(i * step), 400 + 300 * Math.sin(i * step))
             this.arrangeHand(hand, pos, 0)
         }
 
@@ -95,6 +101,11 @@ export class State {
         // Draw state
         Draw.text(`${GameState[this.state]}`, new Vector(600, 40))
 
+        // Draw the cards in play so that they are below peoples hands
+        for (const c of this.cardsInPlay) {
+            Draw.card(c)
+        }
+
         // Draw hands
         for (const c of this.hands.flat()) {
             Draw.card(c)
@@ -105,6 +116,7 @@ export class State {
             Draw.destRegion(r)
         }
 
+
         // Draw other cards if they have been revealed
         // for (const c of completeDeck) {
         //     if (c.revealed) {
@@ -113,13 +125,7 @@ export class State {
         // }
     }
 
-    changeState(interaction: Interaction, newState: GameState) {
-        // Reset all cards and all state to not interactable
-        // remove all drag dests
-
-
-
-        interaction.setDestinationRegions([])
+    disableCards() {
         for (const c of this.hands.flat()) {
             c.interactable = false
         }
@@ -127,6 +133,16 @@ export class State {
         for (const c of this.cardsInPlay) {
             c.interactable = false
         }
+    }
+
+    changeState(interaction: Interaction, newState: GameState) {
+        // Reset all cards and all state to not interactable
+        // remove all drag dests
+
+        // this.state = newState
+
+        interaction.setDestinationRegions([])
+        this.disableCards()
     }
 
     onframe(interaction: Interaction) {
@@ -149,11 +165,14 @@ export class State {
                                 // Dragged cards, move to attacked phase,
                                 this.changeState(interaction, this.State.attacked)
 
+
                                 console.log('cards is ', cards)
 
                                 // remove cards from hand that were dragged in
                                 // keep everything that isnt in cards
                                 this.moveToInPlay((c) => cards.indexOf(c) != -1)
+
+                                this.activePlayer = (this.activePlayer + 1) % this.hands.length
                             }
                         )
                     ]

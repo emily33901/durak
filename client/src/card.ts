@@ -1,8 +1,7 @@
 import * as util from './util.js'
 import { Vector } from './util.js'
 
-
-class Card {
+export class Card {
     card: string[]
     pos: Vector
     size: number
@@ -58,7 +57,7 @@ class Card {
     }
 }
 
-const deck = () => {
+export const deck = () => {
     const deck = []
     for (const n of Card.validNumber) {
         for (const l of Card.validLetter) {
@@ -68,18 +67,4 @@ const deck = () => {
 
     util.shuffleArray(deck)
     return deck
-}
-
-const completeDeck = deck()
-
-const randomHand = () => {
-    return [...Array(8).keys()].map((i) => getCard(i))
-}
-
-const getCard = (idx: number) => {
-    return completeDeck[idx]
-}
-
-export {
-    Card, randomHand, deck, completeDeck, getCard
 }

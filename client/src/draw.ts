@@ -31,17 +31,15 @@ export class Draw {
 
         const img = this.getCardImg(name)
 
-        const { x, y } = where
-
-        this.ctx.drawImage(img, x, y, size * Card.aspect, size)
+        this.ctx.drawImage(img, where.x, where.y, size * Card.aspect, size)
 
         if (selected) {
             this.ctx.filter = 'brightness(100%) sepia(100%) saturate(1000) hue-rotate(-60deg) opacity(70%)'
-            this.ctx.drawImage(img, x, y, size * Card.aspect, size)
+            this.ctx.drawImage(img, where.x, where.y, size * Card.aspect, size)
             this.ctx.filter = 'none'
         } else if (!interactable) {
             this.ctx.filter = 'brightness(0%) opacity(40%)'
-            this.ctx.drawImage(img, x, y, size * Card.aspect, size)
+            this.ctx.drawImage(img, where.x, where.y, size * Card.aspect, size)
             this.ctx.filter = 'none'
         }
     }

@@ -1,8 +1,5 @@
-import { Card, randomHand, completeDeck, getCard } from './card.js'
-import { GameState, State } from './state.js'
-import { DragDest, Interaction } from './interaction.js'
-import * as util from './util.js'
-import { Vector } from './util.js'
+import { State } from './state.js'
+import { Interaction } from './interaction.js'
 import { Draw } from './draw.js'
 
 let ctx: CanvasRenderingContext2D
@@ -19,6 +16,12 @@ const frame = (state: State, interaction: Interaction) => {
 
 export function gameInit() {
     canvas = document.getElementById('canvas') as HTMLCanvasElement
+    const canvasStyle = window.getComputedStyle(canvas)
+    console.info(window.getComputedStyle(canvas).width)
+    canvas.width = + canvasStyle.width.slice(0, canvasStyle.width.length - 2)
+    canvas.height = + canvasStyle.height.slice(0, canvasStyle.height.length - 2)
+
+    console.log(canvas.width, canvas.height)
     ctx = canvas.getContext('2d') as CanvasRenderingContext2D
     Draw.ctx = ctx
 

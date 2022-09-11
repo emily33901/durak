@@ -1,4 +1,4 @@
-import { Card, getCard } from './card.js'
+import { Card } from './card.js'
 import * as util from './util.js'
 import { Box, Vector } from './util.js'
 
