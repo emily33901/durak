@@ -26,6 +26,7 @@ export class State {
 
     cardsInPlay: Card[] = []
     drawPile: Card[] = []
+    discardPile: Card[] = []
     hands: Card[][] = []
     deck: Card[] = []
     activePlayer = 0
@@ -178,6 +179,14 @@ export class State {
 
         interaction.onframe(this.deck)
 
+        // Slight hack for the fact that interaction calls dragdest callbacks
+        // which might move cards into play, when that happens we want to 
+        // rearrange the cards so that the new dragdests are in the correct places
+        if (this.didChangeState) {
+            this.arrangeCards()
+            this.sortHands()
+        }
+
         // TODO: calc for cards on table
 
         switch (this.state) {
@@ -230,7 +239,27 @@ export class State {
                     // All cards that are in play become destination regions
                     const destRegions = this.cardsInPlay.map(c => new DragDest(
                         c.pos.add(new Vector(0, -20)),
-                        Card.defaultSize, 0
+                        Card.defaultSize, 0, () => { alert('') },
+                        (cards) => {
+                            // TODO: temporarily only allow one card
+                            if (cards.length != 1) return false
+
+                            // Make sure that this card is from the hand and not from the table
+                            for (const c of cards) {
+                                if (this.cardsInPlay.indexOf(c) != -1) return false
+                            }
+                            // Cards must be the same suit or higher as something that is in play
+                            const [n, l] = c.card
+                            for (const card of cards) {
+                                // if the suit matches and the number is higher,
+                                // then this drag is okay
+                                if (l == card.card[1] && n < card.card[0]) {
+                                    return true
+                                }
+                            }
+                            // Otherwise this is a valid destination
+                            return false
+                        }
                     ))
 
                     // Add a drag region for dragging in play cards back to hand
@@ -267,7 +296,19 @@ export class State {
                 }
 
                 if (selectedCards.length == 0) {
-                    // any cards that match a suit on the table and are higher are selectable
+                    // any cards that match a suit on the table and are higher in number are selectable
+                    this.updateActiveHand(h => {
+                        for (const inPlay of this.cardsInPlay) {
+                            const [n, l] = inPlay.card
+                            for (const card of h) {
+                                if (l == card.card[1] && n < card.card[0]) {
+                                    card.interactable = true
+                                }
+                            }
+                        }
+
+                        return h
+                    })
                     // this.updateActiveHand(h => h.map(x => { x.interactable = true; return x }))
                 }
 
