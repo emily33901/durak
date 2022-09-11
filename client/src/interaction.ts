@@ -27,7 +27,9 @@ class DragDest {
         this.valid = false
 
         this.action = action ?? (() => undefined)
-        this.calcValid = valid ?? (() => false)
+
+        // Assume that drag destinations are only valid if something has been dragged
+        this.calcValid = (cards) => cards.length > 0 && valid ? valid(cards) : false
     }
 
     bb() {

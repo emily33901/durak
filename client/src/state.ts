@@ -41,7 +41,9 @@ export class State {
         // Give cards to each player from the draw pile
         this.maxCardsInHand = Math.min(Math.floor(this.drawPile.length / playerCount), 6)
         console.log('max ', this.maxCardsInHand)
-        this.hands = [...new Array(playerCount).keys()].map(_ => [...new Array(this.maxCardsInHand)].map(_ => this.drawPile.pop() as Card))
+        this.hands = [...new Array(playerCount).keys()].map(
+            () => [...new Array(this.maxCardsInHand)].map(
+                () => this.drawPile.pop() as Card))
 
         this.disableCards()
     }
@@ -69,7 +71,7 @@ export class State {
         }
     }
 
-    arrageCards() {
+    arrangeCards() {
         const step = (2 * Math.PI) / this.hands.length
         const offset = Math.floor(this.hands.length / 2)
         const where = new Vector(700, 300)
@@ -85,7 +87,7 @@ export class State {
         }
         {
             // Arrange draw pile in centre
-            this.arrangeHand(this.drawPile, new Vector(400, 500), 0, 1)
+            this.arrangeHand(this.drawPile, new Vector(0, 0), 0, 1)
         }
 
     }
@@ -171,8 +173,8 @@ export class State {
     onframe(interaction: Interaction) {
         const selectedCards = interaction.draggedCards
 
+        this.arrangeCards()
         this.sortHands()
-        this.arrageCards()
 
         interaction.onframe(this.deck)
 
@@ -190,17 +192,17 @@ export class State {
                             new DragDest(
                                 new Vector(600, 300), 200, 0,
                                 (cards) => {
-                                    // Dragged cards, move to attacked phase,
-                                    this.changeState(interaction, this.State.attacked)
-
                                     console.log('cards is ', cards)
 
                                     // remove cards from hand that were dragged in
                                     // keep everything that isnt in cards
                                     this.moveToInPlay((c) => cards.indexOf(c) != -1)
                                     this.nextPlayer()
+
+                                    // move to attacked phase,
+                                    this.changeState(interaction, this.State.attacked)
                                 },
-                                () => true
+                                (cards) => true
                             )
                         ]
                     )
@@ -266,7 +268,7 @@ export class State {
 
                 if (selectedCards.length == 0) {
                     // any cards that match a suit on the table and are higher are selectable
-                    this.updateActiveHand(h => h.map(x => { x.interactable = true; return x }))
+                    // this.updateActiveHand(h => h.map(x => { x.interactable = true; return x }))
                 }
 
                 break
