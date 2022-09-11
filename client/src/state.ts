@@ -283,7 +283,7 @@ export class State {
         }
 
         for (const h of hands) {
-            if (h.length < this.maxCardsInHand && this.drawPile.length > 0) {
+            for (; h.length < this.maxCardsInHand && this.drawPile.length > 0;) {
                 h.push(this.drawPile.pop() as Card)
             }
         }
