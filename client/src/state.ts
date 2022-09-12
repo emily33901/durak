@@ -33,7 +33,7 @@ export class State {
     deck: Card[] = []
     activePlayer = 0
     maxCardsInHand = 0
-    didChangeState = false
+    recalcDestRegions = false
 
     constructor() {
         this.deck = deck()
@@ -167,7 +167,7 @@ export class State {
         // remove all drag dests
 
         this.state = newState
-        this.didChangeState = true
+        this.recalcDestRegions = true
 
         interaction.setDestinationRegions([])
         this.disableCards()
@@ -189,7 +189,7 @@ export class State {
         // Slight hack for the fact that interaction calls dragdest callbacks
         // which might move cards into play, when that happens we want to 
         // rearrange the cards so that the new dragdests are in the correct places
-        if (this.didChangeState) {
+        if (this.recalcDestRegions) {
             this.arrangeCards()
             this.sortHands()
         }
@@ -202,7 +202,7 @@ export class State {
                 break
             }
             case this.State.attacking: {
-                if (this.didChangeState) {
+                if (this.recalcDestRegions) {
                     interaction.setDestinationRegions(
                         [
                             new DragDest(
@@ -222,7 +222,7 @@ export class State {
                             )
                         ]
                     )
-                    this.didChangeState = false
+                    this.recalcDestRegions = false
                 }
 
                 if (selectedCards.length == 0) {
@@ -242,42 +242,49 @@ export class State {
                 break
             }
             case this.State.attacked: {
-                if (this.didChangeState) {
+                if (this.recalcDestRegions) {
                     // All cards that are in play become destination regions
-                    const destRegions = this.cardsInPlay.map(c => new DragDest(
-                        c.pos.add(new Vector(0, -20)),
-                        Card.defaultSize, 0,
-                        (cards) => {
-                            // A card was dragged onto this region
-                            // for now we assume there is only one card, as the region
-                            // would not be valid for more than one, (see below)
-                            console.assert(cards.length == 1)
-                            // Move this card from hand to in play
-                            this.moveToInPlay((inHand) => inHand == cards[0])
-                            //  Now put this card in defense against c
-                            this.defence.set(c, cards[0])
-                        },
-                        (cards) => {
-                            // TODO: temporarily only allow one card
-                            if (cards.length != 1) return false
+                    const destRegions = this.cardsInPlay
+                        .filter(c => !(this.defence.has(c) || [...this.defence.values()].indexOf(c) != -1))
+                        .map(c => new DragDest(
+                            c.pos.add(new Vector(0, -20)),
+                            Card.defaultSize, 0,
+                            (cards) => {
+                                // A card was dragged onto this region
+                                // for now we assume there is only one card, as the region
+                                // would not be valid for more than one, (see below)
+                                console.assert(cards.length == 1)
+                                // Move this card from hand to in play
+                                this.moveToInPlay((inHand) => inHand == cards[0])
+                                //  Now put this card in defense against c
+                                this.defence.set(c, cards[0])
 
-                            // Make sure that this card is from the hand and not from the table
-                            for (const c of cards) {
-                                if (this.cardsInPlay.indexOf(c) != -1) return false
-                            }
-                            // Cards must be the same suit or higher as something that is in play
-                            const [_, l] = c.card
-                            for (const card of cards) {
-                                // if the suit matches and the number is higher,
-                                // then this drag is okay
-                                if (l == card.card[1] && card.compare(c)) {
-                                    return true
+                                this.recalcDestRegions = true
+                            },
+                            (cards) => {
+                                // TODO: temporarily only allow one card
+                                if (cards.length != 1) return false
+
+                                // if this card has already been defended against then it cannot be valid
+                                if (this.defence.get(c)) return false
+
+                                // Make sure that this card is from the hand and not from the table
+                                for (const c of cards) {
+                                    if (this.cardsInPlay.indexOf(c) != -1) return false
                                 }
+                                // Cards must be the same suit or higher as something that is in play
+                                const [_, l] = c.card
+                                for (const card of cards) {
+                                    // if the suit matches and the number is higher,
+                                    // then this drag is okay
+                                    if (l == card.card[1] && card.compare(c) > 0) {
+                                        return true
+                                    }
+                                }
+                                // Otherwise this is a valid destination
+                                return false
                             }
-                            // Otherwise this is a valid destination
-                            return false
-                        }
-                    ))
+                        ))
 
                     // Add a drag region for dragging in play cards back to hand
                     // to signal pick up and end of turn
@@ -304,7 +311,7 @@ export class State {
                     ))
                     interaction.setDestinationRegions(destRegions)
 
-                    this.didChangeState = false
+                    this.recalcDestRegions = false
                 }
 
                 // Cards on the table need to be interactable so that they can be dragged
@@ -317,9 +324,9 @@ export class State {
                     // any cards that match a suit on the table and are higher in number are selectable
                     this.updateActiveHand(h => {
                         for (const inPlay of this.cardsInPlay) {
-                            const [n, l] = inPlay.card
+                            const [_, l] = inPlay.card
                             for (const card of h) {
-                                if (l == card.card[1] && n < card.card[0]) {
+                                if (l == card.card[1] && card.compare(inPlay) > 0) {
                                     card.interactable = true
                                 }
                             }
