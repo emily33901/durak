@@ -25,6 +25,8 @@ export class State {
     state = this.State.started
 
     cardsInPlay: Card[] = []
+    // Which cards in play are being played on which cards (if any)
+    defence: Map<Card, Card> = new Map()
     drawPile: Card[] = []
     discardPile: Card[] = []
     hands: Card[][] = []
@@ -84,10 +86,15 @@ export class State {
         }
         {
             // Arrange cards in play in the centre
-            this.arrangeHand(this.cardsInPlay, new Vector(500, 500), 0, 100)
+            this.arrangeHand(this.cardsInPlay.filter(c => [...this.defence.values()].indexOf(c) == -1), new Vector(500, 300), 0, 100)
+
+            // Then arrange defence cards on top of the card that they were played on
+            for (const [k, v] of this.defence) {
+                v.pos = k.pos.add(new Vector(0, -30))
+            }
         }
         {
-            // Arrange draw pile in centre
+            // Arrange draw pile in corner
             this.arrangeHand(this.drawPile, new Vector(0, 0), 0, 1)
         }
 
@@ -239,7 +246,17 @@ export class State {
                     // All cards that are in play become destination regions
                     const destRegions = this.cardsInPlay.map(c => new DragDest(
                         c.pos.add(new Vector(0, -20)),
-                        Card.defaultSize, 0, () => { alert('') },
+                        Card.defaultSize, 0,
+                        (cards) => {
+                            // A card was dragged onto this region
+                            // for now we assume there is only one card, as the region
+                            // would not be valid for more than one, (see below)
+                            console.assert(cards.length == 1)
+                            // Move this card from hand to in play
+                            this.moveToInPlay((inHand) => inHand == cards[0])
+                            //  Now put this card in defense against c
+                            this.defence.set(c, cards[0])
+                        },
                         (cards) => {
                             // TODO: temporarily only allow one card
                             if (cards.length != 1) return false
@@ -249,11 +266,11 @@ export class State {
                                 if (this.cardsInPlay.indexOf(c) != -1) return false
                             }
                             // Cards must be the same suit or higher as something that is in play
-                            const [n, l] = c.card
+                            const [_, l] = c.card
                             for (const card of cards) {
                                 // if the suit matches and the number is higher,
                                 // then this drag is okay
-                                if (l == card.card[1] && n < card.card[0]) {
+                                if (l == card.card[1] && card.compare(c)) {
                                     return true
                                 }
                             }
@@ -272,6 +289,7 @@ export class State {
                             // the active players hand as they picked up, then move to next player
                             this.updateActiveHand((h) => { h.push(...this.cardsInPlay); return h })
                             this.cardsInPlay = []
+                            this.defence.clear()
 
                             this.changeState(interaction, this.State.attacking)
                             this.endRound()
@@ -319,6 +337,8 @@ export class State {
 
     // End the round, pulls cards from the draw pile in play order
     endRound() {
+        console.assert(this.defence.size == 0)
+
         const hands = [...this.hands]
         // Shuffle hands into correct order for draw
         for (let i = 0; i < this.activePlayer; i++) {

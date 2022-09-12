@@ -96,7 +96,7 @@ class Interaction {
         // (i.e. the furthest backest card is drawn first so that
         // the others are on top of it.) and we want user interaction
         // to be the other way around
-        for (const c of [...deck].reverse()) {
+        for (const c of deck) {
             if (this.draggedCards.includes(c)) {
                 if (this.dragging) {
                     const oldPos = c.pos
