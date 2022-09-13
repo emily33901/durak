@@ -86,11 +86,11 @@ export class State {
         }
         {
             // Arrange cards in play in the centre
-            this.arrangeHand(this.cardsInPlay.filter(c => [...this.defence.values()].indexOf(c) == -1), new Vector(500, 300), 0, 100)
+            this.arrangeHand(this.cardsInPlay.filter(c => [...this.defence.values()].indexOf(c) == -1), new Vector(500, 300), 0, 200)
 
             // Then arrange defence cards on top of the card that they were played on
             for (const [k, v] of this.defence) {
-                v.pos = k.pos.add(new Vector(0, -30))
+                v.pos = k.pos.add(new Vector(0, -50))
             }
         }
         {
@@ -140,13 +140,6 @@ export class State {
         for (const c of this.drawPile) {
             Draw.card(c)
         }
-
-        // Draw other cards if they have been revealed
-        // for (const c of completeDeck) {
-        //     if (c.revealed) {
-        //         drawCard(c)
-        //     }
-        // }
 
         // Draw state
         Draw.text(`${GameState[this.state]}`, new Vector(600, 40))
@@ -334,7 +327,6 @@ export class State {
 
                         return h
                     })
-                    // this.updateActiveHand(h => h.map(x => { x.interactable = true; return x }))
                 }
 
                 break
